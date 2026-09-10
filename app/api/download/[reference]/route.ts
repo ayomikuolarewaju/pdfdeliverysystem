@@ -3,9 +3,7 @@ import { createClient } from '@/lib/supabase-server';
 
 const MAX_DOWNLOADS = 10; // generous allowance for retries/devices, not unlimited
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { reference: string } }
+export async function GET( { params }: { params: { reference: string } }
 ) {
   const reference = params.reference;
 
