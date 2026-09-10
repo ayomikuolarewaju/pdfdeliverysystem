@@ -1,17 +1,29 @@
-import Link from 'next/link';
 
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase-server';
+import { useEffect, useState } from 'react';
 // Manually list your guides here as you add them (matches the "add a PDF
 // manually" workflow — a static page per slug, listed here too).
-const guides = [{ slug: 'mediators-field-guide', title: "The Mediator's Field Guide" }];
+
+
+interface PDF {
+  slug: string;
+  title: string;
+  price?: number;
+  currency?: string;
+  cover_image_url?: string | null;
+}
+const guides: PDF[] = [{ slug: 'mediators-field-guide', title: "The Mediator's Field Guide" },{ slug: 'tenant-toolkit', title: "The Tenant Toolkit" }];
 
 export default function HomePage() {
+
   return (
     <main className="bg-paper min-h-screen">
       <div className="max-w-3xl mx-auto px-5 py-16">
         <span className="font-serif italic text-lg">Fieldnotes</span>
         <h1 className="font-serif text-3xl mt-6 mb-8">Guides</h1>
         <div>
-          {guides.map((g) => (
+          {guides?.map((g) => (
             <Link
               key={g.slug}
               href={`/guides/${g.slug}`}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-server';
 import { isValidPaystackSignature, verifyPaystackTransaction } from '@/lib/paystack';
 import { sendDownloadEmail } from '@/lib/mail';
 
@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
   const reference = event.data.reference as string;
 
   // 1. Find the matching purchase, along with the buyer's email
+  const supabaseAdmin = await createClient();
   const { data: purchase, error: purchaseError } = await supabaseAdmin
     .from('purchases')
     .select('id, pdf_id, status, amount, buyers(email)')

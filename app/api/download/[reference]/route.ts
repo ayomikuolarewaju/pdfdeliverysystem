@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-server';
 
 const MAX_DOWNLOADS = 10; // generous allowance for retries/devices, not unlimited
 
@@ -9,6 +9,7 @@ export async function GET(
 ) {
   const reference = params.reference;
 
+  const supabaseAdmin = await createClient();
   const { data: purchase } = await supabaseAdmin
     .from('purchases')
     .select('id, status, pdfs(storage_path)')

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { supabasePublic } from '@/lib/supabase';
+import { createClient  } from '@/lib/supabase';
 
 type Pdf = {
   slug: string;
@@ -24,7 +24,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!slug) return;
-    supabasePublic
+    createClient()
       .from('pdfs')
       .select('slug, title, price, currency, cover_image_url')
       .eq('slug', slug)
@@ -72,7 +72,7 @@ export default function CheckoutPage() {
           <div className="flex gap-4 items-center pb-5 mb-5 border-b border-dashed border-line-strong">
             <div className="w-[46px] h-[60px] bg-green rounded-sm shrink-0" />
             <div>
-              <div className="font-serif text-base">{pdf.title}</div>
+              <div className="font-serif text-bas capitalize">{pdf.title}</div>
               <div className="text-xs text-ink-soft">1 copy · PDF download</div>
             </div>
           </div>
