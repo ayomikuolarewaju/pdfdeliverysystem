@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient  } from '@/lib/supabase';
@@ -13,7 +13,7 @@ type Pdf = {
   cover_image_url: string | null;
 };
 
-export default function CheckoutPage() {
+const CheckoutContent = () => {
   const params = useSearchParams();
   const slug = params.get('pdf');
 
@@ -115,3 +115,9 @@ export default function CheckoutPage() {
     </main>
   );
 }
+
+
+export default function CheckoutPage() { 
+  return (
+     <Suspense fallback={<div>Loading checkout...</div>}> <CheckoutContent /> </Suspense> 
+    ); }
