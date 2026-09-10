@@ -3,9 +3,9 @@ import { createClient } from '@/lib/supabase-server';
 
 const MAX_DOWNLOADS = 10; // generous allowance for retries/devices, not unlimited
 
-export async function GET( { params }: { params: { reference: string } }
+export async function GET( { params }: { params: Promise<{ reference: string }> }
 ) {
-  const reference = params.reference;
+  const {reference} = await params;
 
   const supabaseAdmin = await createClient();
   const { data: purchase } = await supabaseAdmin
