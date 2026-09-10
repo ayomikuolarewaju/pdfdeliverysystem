@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabase';
+import { createClient  } from '@/lib/supabase';
 
 export default async function SuccessPage({
   searchParams,
@@ -13,6 +13,7 @@ export default async function SuccessPage({
 
   // Look up the purchase and its PDF title. The download link itself is
   // served via /api/download/[reference], which enforces expiry/limits.
+  const supabaseAdmin = createClient();
   const { data: purchase } = await supabaseAdmin
     .from('purchases')
     .select('status, amount, currency, pdfs(title)')

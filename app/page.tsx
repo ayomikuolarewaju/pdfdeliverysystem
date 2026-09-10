@@ -1,7 +1,6 @@
 
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase-server';
-import { useEffect, useState } from 'react';
+
 // Manually list your guides here as you add them (matches the "add a PDF
 // manually" workflow — a static page per slug, listed here too).
 
