@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Fieldnotes',
+  title: 'PdfDelivery',
   description: 'PDF guides, delivered instantly.',
 };
 

@@ -13,6 +13,8 @@ export default async function SuccessPage({
     return <p className="p-8 text-ink-soft">Missing payment reference.</p>;
   }
 
+  // Look up the purchase and its PDF title. The download link itself is
+  // served via /api/download/[reference], which enforces expiry/limits.
   const { data: purchase } = await supabaseAdmin
     .from('purchases')
     .select('status, amount, currency, pdfs(title)')
@@ -23,6 +25,7 @@ export default async function SuccessPage({
     return <p className="p-8 text-ink-soft">We couldn&apos;t find that payment.</p>;
   }
 
+  // The webhook is usually near-instant, but can lag a few seconds behind the redirect.
   if (purchase.status !== 'success') {
     return (
       <main className="bg-paper min-h-screen flex items-center justify-center px-5">
@@ -66,7 +69,7 @@ export default async function SuccessPage({
           </div>
         </div>
 
-        <a 
+        <a
           href={downloadUrl}
           className="mt-6 block w-full text-center bg-green hover:bg-green-deep text-paper-raised font-medium text-sm px-6 py-3 rounded-sm"
         >
@@ -74,8 +77,12 @@ export default async function SuccessPage({
         </a>
 
         <p className="mt-5 text-xs text-ink-soft leading-relaxed">
-          A copy of this link was also emailed to you. It stays valid for 48 hours — if it
-          expires, just reply to that email and we&apos;ll resend it.
+          A copy of this link was also emailed to you. It&apos;s a one-time download — once
+          you&apos;ve saved the file, this link stops working. Lost the email before using it?{' '}
+          <a href="/resend" className="underline">
+            Resend it here
+          </a>
+          . Already used it and something went wrong? Reply to your receipt email instead.
         </p>
       </div>
     </main>

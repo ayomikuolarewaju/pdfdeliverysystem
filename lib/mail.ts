@@ -24,19 +24,24 @@ export async function sendDownloadEmail({
   reference,
 }: SendDownloadEmailParams) {
   await transporter.sendMail({
-    from: process.env.SMTP_FROM, // e.g. '"Fieldnotes" <no-reply@yourdomain.com>'
+    from: process.env.SMTP_FROM, // e.g. '"PdfDelivery" <no-reply@yourdomain.com>'
     to,
     subject: `Your download: ${pdfTitle}`,
     text:
       `Thanks for your purchase — here's your download link:\n\n${downloadUrl}\n\n` +
-      `This link stays valid for 48 hours. Reference: ${reference}\n\n` +
-      `If it expires, just reply to this email and we'll resend it.`,
+      `This is a one-time link — it stops working once you've downloaded the file. ` +
+      `Reference: ${reference}\n\n` +
+      `Lost this email before using the link? You can request it again at ${process.env.NEXT_PUBLIC_SITE_URL}/resend. ` +
+      `Already used it and something went wrong? Just reply to this email.`,
     html: `
       <p>Thanks for your purchase — here's your download link:</p>
       <p><a href="${downloadUrl}">${pdfTitle}</a></p>
       <p style="color:#55524A;font-size:13px;">
-        This link stays valid for 48 hours. Reference: ${reference}<br/>
-        If it expires, just reply to this email and we'll resend it.
+        This is a one-time link — it stops working once you've downloaded the file.
+        Reference: ${reference}<br/>
+        Lost this email before using the link? You can
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL}/resend">request it again here</a>.<br/>
+        Already used it and something went wrong? Just reply to this email.
       </p>
     `,
   });
