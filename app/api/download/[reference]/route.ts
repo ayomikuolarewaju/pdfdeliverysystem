@@ -74,7 +74,7 @@ export async function GET(
   if (signError || !signed) {
     console.error('Download: signing error:', signError?.message, 'path:', pdf.storage_path);
     return NextResponse.json(
-      { error: 'Could not generate download link', detail: signError?.message, storagePath: pdf.storage_path },
+      { error: 'Could not generate download link', detail: signError?.message, storage_path: pdf.storage_path },
       { status: 500 }
     );
   }
