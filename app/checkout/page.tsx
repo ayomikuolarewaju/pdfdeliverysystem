@@ -33,38 +33,42 @@ const CheckoutContent = () => {
   }, [slug]);
 
   async function handlePay() {
-    if (!pdf || !email) return;
-    setLoading(true);
-    setError(null);
+  if (!pdf || !email) return;
+  setLoading(true);
+  setError(null);
 
+  try {
     const res = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slug: pdf.slug, email }),
     });
 
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || 'Something went wrong. Please try again.');
-      setLoading(false);
-      return;
+    let data: any = null;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error(`Server returned an unexpected response (status ${res.status}).`);
     }
 
-    window.location.href = data.authorization_url; // off to Paystack
-  }
+    if (!res.ok) {
+      throw new Error(data?.error || 'Something went wrong. Please try again.');
+    }
+    if (!data?.authorization_url) {
+      throw new Error('No payment link returned. Please try again.');
+    }
 
-  if (!slug) {
-    return <p className="p-8 text-ink-soft">No PDF selected.</p>;
+    window.location.href = data.authorization_url;
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    setLoading(false);
   }
-
-  if (!pdf) {
-    return <p className="p-8 text-ink-soft">Loading…</p>;
-  }
+}
 
   return (
     <main className="bg-paper min-h-screen">
       <div className="max-w-[460px] mx-auto px-5 py-10">
-        <Link href={`/guides/${pdf.slug}`} className="text-sm text-ink-soft mb-6 inline-block">
+        <Link href={`/guides/${pdf?.slug}`} className="text-sm text-ink-soft mb-6 inline-block">
           ← Back to the guide
         </Link>
 
@@ -72,14 +76,14 @@ const CheckoutContent = () => {
           <div className="flex gap-4 items-center pb-5 mb-5 border-b border-dashed border-line-strong">
             <div className="w-[46px] h-[60px] bg-green rounded-sm shrink-0" />
             <div>
-              <div className="font-serif text-bas capitalize">{pdf.title}</div>
+              <div className="font-serif text-bas capitalize">{pdf?.title}</div>
               <div className="text-xs text-ink-soft">1 copy · PDF download</div>
             </div>
           </div>
 
           <div className="flex justify-between font-mono text-sm mb-5">
             <span>Total due</span>
-            <span>₦{pdf.price.toLocaleString()}</span>
+            <span>₦{pdf?.price.toLocaleString()}</span>
           </div>
 
           <div className="mb-4">
@@ -102,7 +106,7 @@ const CheckoutContent = () => {
             disabled={loading || !email}
             className="w-full justify-center bg-green hover:bg-green-deep disabled:opacity-50 text-paper-raised font-medium text-sm px-6 py-3 rounded-sm"
           >
-            {loading ? 'Redirecting…' : `Pay ₦${pdf.price.toLocaleString()}`}
+            {loading ? 'Redirecting…' : `Pay ₦${pdf?.price.toLocaleString()}`}
           </button>
         </div>
 
