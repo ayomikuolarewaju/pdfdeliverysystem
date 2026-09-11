@@ -63,3 +63,18 @@ export function isValidPaystackSignature(rawBody: string, signatureHeader: strin
 
   return crypto.timingSafeEqual(expectedBuf, receivedBuf);
 }
+
+// Debug-only helper — never used for the actual security decision, just to
+// log enough detail to tell "wrong key" apart from "body got mangled".
+export function debugSignatureInfo(rawBody: string, signatureHeader: string | null) {
+  const expected = crypto
+    .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY!)
+    .update(rawBody)
+    .digest('hex');
+  return {
+    bodyLength: rawBody.length,
+    bodyPreview: rawBody.slice(0, 80),
+    expectedSig: expected,
+    receivedSig: signatureHeader ?? '(none)',
+  };
+}
