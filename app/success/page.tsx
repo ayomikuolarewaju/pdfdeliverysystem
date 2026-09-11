@@ -1,11 +1,11 @@
-import { createClient  } from '@/lib/supabase';
+import { createAdminClient  } from '@/lib/supabase-admin';
 
 export default async function SuccessPage({
   searchParams,
 }: {
   searchParams: { ref?: string };
 }) {
-  const reference = searchParams.ref;
+  const { ref: reference } = await searchParams;
 
   if (!reference) {
     return <p className="p-8 text-ink-soft">Missing payment reference.</p>;
@@ -13,7 +13,7 @@ export default async function SuccessPage({
 
   // Look up the purchase and its PDF title. The download link itself is
   // served via /api/download/[reference], which enforces expiry/limits.
-  const supabaseAdmin = createClient();
+  const supabaseAdmin = createAdminClient();
   const { data: purchase } = await supabaseAdmin
     .from('purchases')
     .select('status, amount, currency, pdfs(title)')

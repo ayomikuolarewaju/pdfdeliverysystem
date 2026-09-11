@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
 import { initializePaystackTransaction } from '@/lib/paystack';
 import { rateLimit } from '@/lib/rate-limit';
 
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const { slug, email } = parsed.data;
 
   // 1. Look up the PDF (source of truth for price — never trust a price from the client)
-  const supabaseAdmin = await createClient();
+  const supabaseAdmin = await createAdminClient();
   const { data: pdf, error: pdfError } = await supabaseAdmin
     .from('pdfs')
     .select('id, title, price, currency')
