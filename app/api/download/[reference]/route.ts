@@ -68,7 +68,7 @@ export async function GET(
   }
 
   const { data: signed, error: signError } = await supabaseAdmin.storage
-    .from('pdfs')
+    .from('pdfstore')
     .createSignedUrl(pdf.storage_path, 60);
 
   if (signError || !signed) {
