@@ -5,16 +5,14 @@ const supabaseAdmin = createAdminClient();
 export default async function SuccessPage({
   searchParams,
 }: {
-  searchParams: { ref?: string };
+  searchParams: Promise<{ ref?: string }>;
 }) {
-  const reference = searchParams.ref;
+  const { ref: reference } = await searchParams;
 
   if (!reference) {
     return <p className="p-8 text-ink-soft">Missing payment reference.</p>;
   }
 
-  // Look up the purchase and its PDF title. The download link itself is
-  // served via /api/download/[reference], which enforces expiry/limits.
   const { data: purchase } = await supabaseAdmin
     .from('purchases')
     .select('status, amount, currency, pdfs(title)')
@@ -25,7 +23,6 @@ export default async function SuccessPage({
     return <p className="p-8 text-ink-soft">We couldn&apos;t find that payment.</p>;
   }
 
-  // The webhook is usually near-instant, but can lag a few seconds behind the redirect.
   if (purchase.status !== 'success') {
     return (
       <main className="bg-paper min-h-screen flex items-center justify-center px-5">
@@ -69,7 +66,7 @@ export default async function SuccessPage({
           </div>
         </div>
 
-        <a
+        <a 
           href={downloadUrl}
           className="mt-6 block w-full text-center bg-green hover:bg-green-deep text-paper-raised font-medium text-sm px-6 py-3 rounded-sm"
         >
