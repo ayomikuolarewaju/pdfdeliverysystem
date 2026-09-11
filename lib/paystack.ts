@@ -28,7 +28,6 @@ export async function initializePaystackTransaction(params: InitParams) {
   if (!data.status) {
     throw new Error(data.message || 'Paystack initialize failed');
   }
-  // data.data.authorization_url is where you redirect the buyer
   return data.data as { authorization_url: string; access_code: string; reference: string };
 }
 
@@ -43,8 +42,6 @@ export async function verifyPaystackTransaction(reference: string) {
   return data.data as { status: string; reference: string; amount: number; customer: { email: string } };
 }
 
-// Paystack signs webhook bodies with HMAC SHA512 of your secret key.
-// Verify this in the webhook route before trusting the payload.
 import crypto from 'crypto';
 
 export function isValidPaystackSignature(rawBody: string, signatureHeader: string | null) {
@@ -57,8 +54,6 @@ export function isValidPaystackSignature(rawBody: string, signatureHeader: strin
   const expectedBuf = Buffer.from(expected, 'hex');
   const receivedBuf = Buffer.from(signatureHeader, 'hex');
 
-  // Buffers of different length would throw in timingSafeEqual — treat that
-  // as "not valid" rather than crashing the route.
   if (expectedBuf.length !== receivedBuf.length) return false;
 
   return crypto.timingSafeEqual(expectedBuf, receivedBuf);
