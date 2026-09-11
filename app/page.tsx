@@ -11,7 +11,7 @@ export default function HomePage() {
   return (
     <main className="bg-paper min-h-screen">
       <div className="max-w-3xl mx-auto px-5 py-16">
-        <span className="font-serif italic text-lg">Fieldnotes</span>
+        <span className="font-serif italic text-lg">PdfDelivery</span>
         <h1 className="font-serif text-3xl mt-6 mb-8">Guides</h1>
         <div>
           {guides.map((g) => (
