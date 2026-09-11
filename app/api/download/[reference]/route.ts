@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase-admin';
 
 const supabaseAdmin = createAdminClient();
 
-const MAX_DOWNLOADS = 10;
+const MAX_DOWNLOADS = 10; // generous allowance for retries/devices, not unlimited
 
 export async function GET(
   req: NextRequest,
@@ -11,6 +11,10 @@ export async function GET(
 ) {
   const { reference } = await params;
 
+  // Split into separate queries instead of relying on Supabase's nested
+  // `pdfs(storage_path)` embed syntax — that embed silently returns nothing
+  // if PostgREST doesn't recognize a foreign key relationship between the
+  // two tables, which fails exactly like "not found" with no clue why.
   const { data: purchase, error: purchaseError } = await supabaseAdmin
     .from('purchases')
     .select('id, status, pdf_id')
@@ -67,6 +71,8 @@ export async function GET(
     );
   }
 
+  // Mint a short-lived signed URL for this single click — the long-lived
+  // access window lives in `downloads.expires_at`, not in any URL we hand out.
   const { data: signed, error: signError } = await supabaseAdmin.storage
     .from('pdfstore')
     .createSignedUrl(pdf.storage_path, 60);
@@ -74,7 +80,7 @@ export async function GET(
   if (signError || !signed) {
     console.error('Download: signing error:', signError?.message, 'path:', pdf.storage_path);
     return NextResponse.json(
-      { error: 'Could not generate download link', detail: signError?.message, storage_path: pdf.storage_path },
+      { error: 'Could not generate download link', detail: signError?.message, storagePath: pdf.storage_path },
       { status: 500 }
     );
   }

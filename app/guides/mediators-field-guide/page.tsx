@@ -11,7 +11,7 @@ const toc = [
 
 export default function MediatorsFieldGuidePage() {
   return (
-    <main className="bg-paper text-ink min-h-screen ">
+    <main className="bg-paper text-ink min-h-screen">
       <div className="max-w-3xl mx-auto px-5 py-10">
         <header className="flex items-center justify-between mb-10">
           <span className="font-serif italic text-lg">Fieldnotes</span>

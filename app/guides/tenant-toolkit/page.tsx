@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Fraunces, Inter } from 'next/font/google';
-import { createClient } from '@/lib/supabase-server';
+import { createClient } from '@/lib/supabase';
 
 const fraunces = Fraunces({ subsets: ['latin'], weight: ['400', '600', '700'], variable: '--font-fraunces' });
 const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-inter' });
@@ -38,35 +38,29 @@ export default async function TenantToolkitPage() {
   // Price is the one thing pulled live from Supabase — everything else on
   // this page is this guide's own hardcoded marketing copy. If the row
   // hasn't been added yet, fall back rather than breaking the page.
-
-  const supabaseAdmin = await createClient();
-
-  const { data: pdf, error } = await supabaseAdmin
+  const { data: pdf, error: pdfError } = await createClient()
     .from('pdfs')
-    .select('*')
+    .select('price, cover_image_url')
     .eq('slug', SLUG)
     .maybeSingle();
 
-
-
-if (error) {
-  return
-}
-
-   if(!pdf) {
-    return
+  if (pdfError) {
+    console.error(`Supabase error fetching "${SLUG}":`, pdfError.message);
+  } else if (!pdf) {
+    console.warn(`No PDF found for slug "${SLUG}" — using fallback price of ${FALLBACK_PRICE}`);
   }
 
   const price = pdf?.price ?? FALLBACK_PRICE;
   const priceLabel = `₦${price.toLocaleString()}`;
+  const coverImageUrl = pdf?.cover_image_url ?? null;
 
   return (
     <main className={`${fraunces.variable} ${inter.variable} bg-[#FAF7F0] text-[#1C2B39]`} style={{ fontFamily: 'var(--font-inter)' }}>
       {/* ---------- top bar ---------- */}
       <div className="border-b border-[#DAD2BE] py-[18px]">
         <div className="max-w-[1100px] mx-auto px-8 flex items-center justify-between">
-          <div className="font-semibold text-[17px] capitalize" style={{ fontFamily: 'var(--font-fraunces)' }}>
-           {pdf.title}<span className="text-[#9A3324]"></span>
+          <div className="font-semibold text-[17px]" style={{ fontFamily: 'var(--font-fraunces)' }}>
+            Tenant Dispute Resolution <span className="text-[#9A3324]">Toolkit</span>
           </div>
           <div className="text-[13px] text-[#4A5A68] border border-[#DAD2BE] px-3 py-[5px] rounded-[3px]">
             Lagos Edition
@@ -108,28 +102,36 @@ if (error) {
           </div>
 
           <div className="flex justify-center order-first md:order-last">
-            <svg viewBox="0 0 320 400" className="w-full max-w-[340px] h-auto drop-shadow-[0_18px_30px_rgba(28,43,57,0.14)]">
-              <g transform="rotate(-4 160 200)">
-                <rect x="30" y="20" width="260" height="360" rx="4" fill="#FFFFFF" stroke="#DAD2BE" strokeWidth="1.5" />
-                <rect x="56" y="54" width="150" height="10" rx="2" fill="#1C2B39" />
-                <rect x="56" y="76" width="200" height="6" rx="2" fill="#DAD2BE" />
-                <rect x="56" y="90" width="190" height="6" rx="2" fill="#DAD2BE" />
-                <rect x="56" y="104" width="205" height="6" rx="2" fill="#DAD2BE" />
-                <rect x="56" y="118" width="160" height="6" rx="2" fill="#DAD2BE" />
-                <rect x="56" y="148" width="205" height="6" rx="2" fill="#DAD2BE" />
-                <rect x="56" y="162" width="180" height="6" rx="2" fill="#DAD2BE" />
-                <rect x="56" y="176" width="205" height="6" rx="2" fill="#DAD2BE" />
-                <rect x="56" y="190" width="140" height="6" rx="2" fill="#DAD2BE" />
-                <rect x="56" y="220" width="205" height="6" rx="2" fill="#DAD2BE" />
-                <rect x="56" y="234" width="190" height="6" rx="2" fill="#DAD2BE" />
-                <rect x="56" y="248" width="205" height="6" rx="2" fill="#DAD2BE" />
-              </g>
-              <g transform="rotate(-16 235 300)">
-                <rect x="176" y="266" width="118" height="66" rx="3" fill="none" stroke="#9A3324" strokeWidth="4" />
-                <text x="235" y="294" textAnchor="middle" fontFamily="Fraunces, serif" fontWeight="700" fontSize="19" fill="#9A3324">URGENT</text>
-                <text x="235" y="314" textAnchor="middle" fontFamily="Inter, sans-serif" fontWeight="600" fontSize="10" fill="#9A3324" letterSpacing="1.5">RESPOND WITHIN 24H</text>
-              </g>
-            </svg>
+            {coverImageUrl ? (
+              <img
+                src={coverImageUrl}
+                alt="Tenant Dispute Resolution Toolkit cover"
+                className="w-full max-w-[340px] h-auto rounded-[4px] drop-shadow-[0_18px_30px_rgba(28,43,57,0.14)] rotate-[-4deg]"
+              />
+            ) : (
+              <svg viewBox="0 0 320 400" className="w-full max-w-[340px] h-auto drop-shadow-[0_18px_30px_rgba(28,43,57,0.14)]">
+                <g transform="rotate(-4 160 200)">
+                  <rect x="30" y="20" width="260" height="360" rx="4" fill="#FFFFFF" stroke="#DAD2BE" strokeWidth="1.5" />
+                  <rect x="56" y="54" width="150" height="10" rx="2" fill="#1C2B39" />
+                  <rect x="56" y="76" width="200" height="6" rx="2" fill="#DAD2BE" />
+                  <rect x="56" y="90" width="190" height="6" rx="2" fill="#DAD2BE" />
+                  <rect x="56" y="104" width="205" height="6" rx="2" fill="#DAD2BE" />
+                  <rect x="56" y="118" width="160" height="6" rx="2" fill="#DAD2BE" />
+                  <rect x="56" y="148" width="205" height="6" rx="2" fill="#DAD2BE" />
+                  <rect x="56" y="162" width="180" height="6" rx="2" fill="#DAD2BE" />
+                  <rect x="56" y="176" width="205" height="6" rx="2" fill="#DAD2BE" />
+                  <rect x="56" y="190" width="140" height="6" rx="2" fill="#DAD2BE" />
+                  <rect x="56" y="220" width="205" height="6" rx="2" fill="#DAD2BE" />
+                  <rect x="56" y="234" width="190" height="6" rx="2" fill="#DAD2BE" />
+                  <rect x="56" y="248" width="205" height="6" rx="2" fill="#DAD2BE" />
+                </g>
+                <g transform="rotate(-16 235 300)">
+                  <rect x="176" y="266" width="118" height="66" rx="3" fill="none" stroke="#9A3324" strokeWidth="4" />
+                  <text x="235" y="294" textAnchor="middle" fontFamily="Fraunces, serif" fontWeight="700" fontSize="19" fill="#9A3324">URGENT</text>
+                  <text x="235" y="314" textAnchor="middle" fontFamily="Inter, sans-serif" fontWeight="600" fontSize="10" fill="#9A3324" letterSpacing="1.5">RESPOND WITHIN 24H</text>
+                </g>
+              </svg>
+            )}
           </div>
         </div>
       </section>

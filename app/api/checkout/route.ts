@@ -1,120 +1,105 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
+import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase-admin';
-import { isValidPaystackSignature, verifyPaystackTransaction } from '@/lib/paystack';
-import { sendDownloadEmail } from '@/lib/mail';
+import { initializePaystackTransaction } from '@/lib/paystack';
+import { rateLimit } from '@/lib/rate-limit';
 
 const supabaseAdmin = createAdminClient();
 
-async function logOutcome(reference: string | null, outcome: string, detail?: string) {
-  try {
-    await supabaseAdmin.from('webhook_logs').insert({ reference, outcome, detail });
-  } catch {
-    // If logging itself fails, don't let that mask the original problem.
-  }
-}
+const bodySchema = z.object({
+  slug: z
+    .string()
+    .min(1)
+    .max(80)
+    .regex(/^[a-z0-9-]+$/, 'invalid slug format'),
+  email: z.string().email().max(254),
+});
 
 export async function POST(req: NextRequest) {
-  let reference: string | null = null;
+  // Rate-limit by IP: 5 checkout attempts per 10 minutes is plenty for a
+  // genuine buyer and blunts card-testing / spam-purchase abuse.
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const { allowed } = rateLimit(`checkout:${ip}`, 5, 10 * 60 * 1000);
+  if (!allowed) {
+    return NextResponse.json({ error: 'Too many attempts. Please try again shortly.' }, { status: 429 });
+  }
 
+  const parsed = bodySchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  }
+  const { slug, email } = parsed.data;
+
+  // 1. Look up the PDF (source of truth for price — never trust a price from the client)
+  const { data: pdf, error: pdfError } = await supabaseAdmin
+    .from('pdfs')
+    .select('id, title, price, currency')
+    .eq('slug', slug)
+    .single();
+
+  if (pdfError || !pdf) {
+    if (pdfError) console.error('PDF lookup error:', pdfError.message);
+    return NextResponse.json({ error: 'PDF not found' }, { status: 404 });
+  }
+
+  // 2. Find or create the buyer
+  const { data: existingBuyer } = await supabaseAdmin
+    .from('buyers')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle();
+
+  let buyerId = existingBuyer?.id;
+  if (!buyerId) {
+    const { data: newBuyer, error: buyerError } = await supabaseAdmin
+      .from('buyers')
+      .insert({ email })
+      .select('id')
+      .single();
+    if (buyerError) {
+      console.error('Buyer insert error:', buyerError.message, buyerError.details, buyerError.hint);
+      return NextResponse.json({ error: 'Could not create buyer' }, { status: 500 });
+    }
+    buyerId = newBuyer.id;
+  }
+
+  // 3. Create a pending purchase row with our own reference.
+  // Use a full UUID, not a short slice — a short reference is guessable,
+  // and this reference is the only thing gating access to the download.
+  const reference = `FN-${randomUUID()}`;
+
+  const { error: purchaseError } = await supabaseAdmin.from('purchases').insert({
+    buyer_id: buyerId,
+    pdf_id: pdf.id,
+    payment_provider: 'paystack',
+    payment_reference: reference,
+    amount: pdf.price,
+    currency: pdf.currency,
+    status: 'pending',
+  });
+
+  if (purchaseError) {
+    return NextResponse.json({ error: 'Could not create purchase' }, { status: 500 });
+  }
+
+  // 4. Kick off the Paystack transaction
   try {
-    const rawBody = await req.text();
-    const signature = req.headers.get('x-paystack-signature');
-
-    if (!isValidPaystackSignature(rawBody, signature)) {
-      await logOutcome(null, 'invalid_signature');
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-    }
-
-    const event = JSON.parse(rawBody);
-
-    if (event.event !== 'charge.success') {
-      await logOutcome(event.data?.reference ?? null, 'ignored_event', event.event);
-      return NextResponse.json({ received: true });
-    }
-
-    reference = event.data.reference as string;
-
-    // 1. Find the matching purchase, along with the buyer's email
-    const { data: purchase, error: purchaseError } = await supabaseAdmin
-      .from('purchases')
-      .select('id, pdf_id, status, amount, buyers(email)')
-      .eq('payment_reference', reference)
-      .single();
-
-    if (purchaseError || !purchase) {
-      await logOutcome(reference, 'purchase_not_found', purchaseError?.message);
-      return NextResponse.json({ error: 'Purchase not found' }, { status: 404 });
-    }
-
-    // Idempotency: Paystack can retry webhooks — don't double-fulfil
-    if (purchase.status === 'success') {
-      await logOutcome(reference, 'already_success');
-      return NextResponse.json({ received: true });
-    }
-
-    // 2. Never fulfil off the webhook payload alone — re-fetch the transaction
-    // straight from Paystack's API and confirm it actually succeeded, and that
-    // the amount paid matches what this purchase expected.
-    const verified = await verifyPaystackTransaction(reference);
-    const expectedKobo = Math.round(purchase.amount * 100);
-
-    if (verified.status !== 'success' || verified.amount !== expectedKobo) {
-      await logOutcome(
-        reference,
-        'verify_mismatch',
-        `verified.status=${verified.status} verified.amount=${verified.amount} expectedKobo=${expectedKobo}`
-      );
-      return NextResponse.json({ error: 'Verification mismatch' }, { status: 400 });
-    }
-
-    // 3. Mark the purchase as paid
-    await supabaseAdmin
-      .from('purchases')
-      .update({ status: 'success', confirmed_at: new Date().toISOString() })
-      .eq('id', purchase.id);
-
-    // 4. Look up the PDF's storage path + title (for the email)
-    const { data: pdf } = await supabaseAdmin
-      .from('pdfs')
-      .select('storage_path, title')
-      .eq('id', purchase.pdf_id)
-      .single();
-
-    if (!pdf) {
-      await logOutcome(reference, 'pdf_missing');
-      return NextResponse.json({ error: 'PDF record missing' }, { status: 500 });
-    }
-
-    // 5. Set a 48-hour access window for this purchase. We don't hand out a
-    // long-lived signed URL directly — /api/download/[reference] mints a
-    // short-lived one on each click, checked against this expiry.
-    const expiresInSeconds = 60 * 60 * 48;
-    const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
-
-    // 6. Record the download entry
-    await supabaseAdmin.from('downloads').insert({
-      purchase_id: purchase.id,
-      signed_url: '',
-      expires_at: expiresAt,
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/+$/, ''); // strip trailing slash(es)
+    const tx = await initializePaystackTransaction({
+      email,
+      amountKobo: Math.round(pdf.price * 100),
+      reference,
+      callbackUrl: `${siteUrl}/success?ref=${reference}`,
+      metadata: { pdf_slug: slug },
     });
 
-    // 7. Email the buyer their download link
-    const buyerEmail = (purchase as any).buyers?.email;
-    const downloadUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/download/${reference}`;
-    if (buyerEmail) {
-      try {
-        await sendDownloadEmail({ to: buyerEmail, pdfTitle: pdf.title, downloadUrl, reference });
-      } catch (mailError) {
-        console.error('Failed to send download email:', mailError);
-      }
-    }
-
-    await logOutcome(reference, 'success');
-    return NextResponse.json({ received: true });
+    return NextResponse.json({ authorization_url: tx.authorization_url });
   } catch (err) {
-    // Top-level safety net — without this, any unexpected throw (e.g. the
-    // Paystack verify call failing) crashes silently with nothing recorded.
-    await logOutcome(reference, 'unhandled_error', err instanceof Error ? err.message : String(err));
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    console.error('Paystack initialize error:', err instanceof Error ? err.message : err);
+    return NextResponse.json(
+      { error: 'Could not start payment. Please try again shortly.' },
+      { status: 502 }
+    );
   }
 }
