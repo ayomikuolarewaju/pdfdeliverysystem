@@ -1,31 +1,54 @@
-import { NextRequest,NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase-admin';
 
-const MAX_DOWNLOADS = 10; // generous allowance for retries/devices, not unlimited
+const supabaseAdmin = createAdminClient();
 
-export async function GET( 
-  request: NextRequest,
+const MAX_DOWNLOADS = 10;
+
+export async function GET(
+  req: NextRequest,
   { params }: { params: Promise<{ reference: string }> }
 ) {
-  const {reference} = await params;
+  const { reference } = await params;
 
-  const supabaseAdmin = await createClient();
-  const { data: purchase } = await supabaseAdmin
+  const { data: purchase, error: purchaseError } = await supabaseAdmin
     .from('purchases')
-    .select('id, status, pdfs(storage_path)')
+    .select('id, status, pdf_id')
     .eq('payment_reference', reference)
-    .single();
+    .maybeSingle();
 
-  if (!purchase || purchase.status !== 'success') {
-    return NextResponse.json({ error: 'Link not found or payment not confirmed' }, { status: 404 });
+  if (purchaseError) {
+    console.error('Download: purchase lookup error:', purchaseError.message);
+    return NextResponse.json({ error: 'Lookup failed', detail: purchaseError.message }, { status: 500 });
+  }
+  if (!purchase) {
+    return NextResponse.json({ error: 'No purchase found for this reference' }, { status: 404 });
+  }
+  if (purchase.status !== 'success') {
+    return NextResponse.json({ error: `Payment not confirmed yet (status: ${purchase.status})` }, { status: 404 });
   }
 
-  const { data: download } = await supabaseAdmin
+  const { data: pdf, error: pdfError } = await supabaseAdmin
+    .from('pdfs')
+    .select('storage_path')
+    .eq('id', purchase.pdf_id)
+    .maybeSingle();
+
+  if (pdfError || !pdf) {
+    console.error('Download: pdf lookup error:', pdfError?.message);
+    return NextResponse.json({ error: 'PDF record missing', detail: pdfError?.message }, { status: 500 });
+  }
+
+  const { data: download, error: downloadError } = await supabaseAdmin
     .from('downloads')
     .select('id, expires_at, download_count')
     .eq('purchase_id', purchase.id)
-    .single();
+    .maybeSingle();
 
+  if (downloadError) {
+    console.error('Download: downloads lookup error:', downloadError.message);
+    return NextResponse.json({ error: 'Lookup failed', detail: downloadError.message }, { status: 500 });
+  }
   if (!download) {
     return NextResponse.json({ error: 'No download record for this purchase' }, { status: 404 });
   }
@@ -44,19 +67,16 @@ export async function GET(
     );
   }
 
-  const storagePath = (purchase as any).pdfs?.storage_path;
-  if (!storagePath) {
-    return NextResponse.json({ error: 'File missing' }, { status: 500 });
-  }
-
-  // Mint a short-lived signed URL for this single click — the long-lived
-  // access window lives in `downloads.expires_at`, not in any URL we hand out.
   const { data: signed, error: signError } = await supabaseAdmin.storage
     .from('pdfs')
-    .createSignedUrl(storagePath, 60);
+    .createSignedUrl(pdf.storage_path, 60);
 
   if (signError || !signed) {
-    return NextResponse.json({ error: 'Could not generate download link' }, { status: 500 });
+    console.error('Download: signing error:', signError?.message, 'path:', pdf.storage_path);
+    return NextResponse.json(
+      { error: 'Could not generate download link', detail: signError?.message, storagePath: pdf.storage_path },
+      { status: 500 }
+    );
   }
 
   await supabaseAdmin
