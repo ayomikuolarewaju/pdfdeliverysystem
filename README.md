@@ -1,33 +1,36 @@
-# PDF Delivery System
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-A lean storefront for selling PDF guides, built to be simple to extend: add a product, add a page.
+## Getting Started
 
-🔗 **Live:** [pdfsystem.netlify.app](https://pdfsystem.netlify.app/)
+First, run the development server:
 
-## What it does
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-Sells downloadable PDFs through per-product landing pages, with checkout routed through Nigerian payment processors and the download link delivered automatically by email.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Features
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-- **Per-PDF landing pages** — each product gets its own static page (title, cover image, description) rather than a single dynamic route, so every product page can be tuned individually
-- **Generic payment and success pages** — shared across all products, swapping only price and cover image
-- **Nigerian payment rails** — checkout via Paystack and Flutterwave
-- **Buyer capture** — buyer email captured at checkout and stored alongside the purchase
-- **Automated delivery** — download link emailed on successful payment via plain SMTP
-- **Supabase-backed catalog** — storage for the files themselves, a PDF metadata table (name, page count, storage reference, creation date), and a buyer list
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Tech stack
+## Learn More
 
-- **Framework:** Next.js
-- **Backend:** Supabase (storage, catalog, buyers)
-- **Payments:** Paystack, Flutterwave
-- **Delivery:** SMTP email (Gmail/Zoho)
+To learn more about Next.js, take a look at the following resources:
 
-## Architecture notes
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-Adding a new PDF is a deliberately manual, two-step process — add the static landing page, add the corresponding row in Supabase — rather than a scaffolding script. For a catalog this size, that's a simpler and more reliable process than building tooling around it.
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Status
+## Deploy on Vercel
 
-Live.
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
