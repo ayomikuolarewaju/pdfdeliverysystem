@@ -34,7 +34,7 @@ export async function initializePaystackTransaction(params: InitParams) {
 
 export async function verifyPaystackTransaction(reference: string) {
   const res = await fetch(`${PAYSTACK_BASE}/transaction/verify/${reference}`, {
-    headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+    headers: { Authorization: `Bearer ${process.env.PAYSTACK_KEY}` },
   });
   const data = await res.json();
   if (!data.status) {
@@ -50,7 +50,7 @@ import crypto from 'crypto';
 export function isValidPaystackSignature(rawBody: string, signatureHeader: string | null) {
   if (!signatureHeader) return false;
   const expected = crypto
-    .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY!)
+    .createHmac('sha512', process.env.PAYSTACK_KEY!)
     .update(rawBody)
     .digest('hex');
 
@@ -68,7 +68,7 @@ export function isValidPaystackSignature(rawBody: string, signatureHeader: strin
 // log enough detail to tell "wrong key" apart from "body got mangled".
 export function debugSignatureInfo(rawBody: string, signatureHeader: string | null) {
   const expected = crypto
-    .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY!)
+    .createHmac('sha512', process.env.PAYSTACK_KEY!)
     .update(rawBody)
     .digest('hex');
   return {
