@@ -5,6 +5,7 @@ import Link from 'next/link';
 const guides = [
   { slug: 'mediators-field-guide', title: "The Mediator's Field Guide" },
   { slug: 'tenant-toolkit', title: 'Tenant Dispute Resolution Toolkit — Lagos Edition' },
+  { slug: 'htmlcssjs', title: `HTML, CSS & JavaScript The Complete Beginner's Guide` },
 ];
 
 export default function HomePage() {
