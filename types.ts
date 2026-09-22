@@ -40,11 +40,7 @@ export interface BonusItem {
   tag: string;
 }
 
-export interface FAQItem {
-  question: string;
-  answer: string;
-  category?: string;
-}
+
 
 export interface BookMetadata {
   title: string;

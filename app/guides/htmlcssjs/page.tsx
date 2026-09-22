@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from '@/lib/supabase';
 import Image from "next/image";
-import BuyButton from "@/components/BuyButton";
 import CodeSample from "@/components/CodeSample";
 import Faq from "@/components/Faq";
 import { formatNaira } from "@/lib/format";
