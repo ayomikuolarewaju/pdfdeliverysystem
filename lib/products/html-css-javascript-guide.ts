@@ -13,11 +13,9 @@ export const product = {
   // Keep this in step with the amount on your Paystack Payment Page
   price: 2000,
 
-
-
   // Paste your Paystack Payment Page link into .env.local (see .env.example)
   paystackUrl:
-    process.env.PaystackUrl ?? "https://paystack.com/pay/your-slug",
+    process.env.NEXT_PUBLIC_PAYSTACK_HTML_CSS_JS_URL ?? "https://paystack.com/pay/your-slug",
 
   brand: "Verscomm",
   supportEmail: "versatilecommservice@gmail.com",

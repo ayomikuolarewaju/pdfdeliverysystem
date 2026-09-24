@@ -6,6 +6,7 @@ const guides = [
   { slug: 'mediators-field-guide', title: "The Mediator's Field Guide" },
   { slug: 'tenant-toolkit', title: 'Tenant Dispute Resolution Toolkit — Lagos Edition' },
   { slug: 'htmlcssjs', title: `HTML, CSS & JavaScript The Complete Beginner's Guide` },
+   { slug: 'lagos-citizens-handbook', title: `The Lagos Citizen's Government Services Handbook` }
 ];
 
 export default function HomePage() {
